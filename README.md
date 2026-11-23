@@ -38,6 +38,24 @@ python gerar_hash_senha.py
   usados apenas como marcadores visuais (alvo em vermelho, não-alvo em
   verde) para apoiar a identificação visual de casos críticos.
 
+## Versão standalone (arquivo HTML único)
+
+[`mapa_portatil.html`](mapa_portatil.html) é uma versão independente, sem
+Python/Streamlit: HTML + JavaScript puro (Leaflet + PapaParse via CDN), com a
+mesma lógica de setores/azimutes. Basta baixar esse arquivo e abrir com
+duplo clique em qualquer PC com navegador e internet (os mapas de satélite
+são carregados via CDN/Google, então precisa de conexão).
+
+Diferença importante: **não tem login de servidor**. Existe apenas uma trava
+de senha local em JavaScript (padrão `admin`), que serve só para evitar
+abertura casual — qualquer pessoa com acesso ao arquivo pode ver o
+código-fonte e extrair/trocar a senha. Para trocar a senha, gere um novo
+hash SHA-256 e substitua a constante `SENHA_HASH_SHA256` no arquivo:
+
+```bash
+python -c "import hashlib; print(hashlib.sha256('sua-nova-senha'.encode()).hexdigest())"
+```
+
 ## Deploy no Streamlit Community Cloud
 
 1. Suba este repositório para o GitHub (já feito, se você seguiu o fluxo

@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mapa de ERBs e Azimutes</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+  :root {
+    --bg: #f5f5f4;
+    --panel-bg: #ffffff;
+    --border: #d6d3d1;
+    --text: #1c1917;
+    --text-muted: #6b6560;
+    --accent: #2563eb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #1c1917;
+      --panel-bg: #292524;
+      --border: #44403c;
+      --text: #f5f5f4;
+      --text-muted: #a8a29e;
+      --accent: #60a5fa;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #1c1917;
+    --panel-bg: #292524;
+    --border: #44403c;
+    --text: #f5f5f4;
+    --text-muted: #a8a29e;
+    --accent: #60a5fa;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, Segoe UI, Arial, sans-serif;
+  }
+
+  #lock-screen {
+    position: fixed; inset: 0; z-index: 10000;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--bg);
+  }
+  #lock-box {
+    background: var(--panel-bg); border: 1px solid var(--border);
+    border-radius: 12px; padding: 28px; width: 300px; max-width: 90vw;
+    text-align: center;
+  }
+  #lock-box h1 { font-size: 18px; margin: 0 0 6px; }
+  #lock-box p { font-size: 13px; color: var(--text-muted); margin: 0 0 16px; }
+  #lock-box input {
+    width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--bg); color: var(--text); font-size: 14px; margin-bottom: 10px;
+  }
+  #lock-box button {
+    width: 100%; padding: 10px; border-radius: 8px; border: none;
+    background: var(--accent); color: #fff; font-size: 14px; cursor: pointer;
+  }
+  #lock-error { color: #dc2626; font-size: 12px; min-height: 16px; margin-top: 6px; }
+
+  #app { display: none; height: 100vh; flex-direction: column; }
+  header {
+    padding: 12px 16px; border-bottom: 1px solid var(--border); background: var(--panel-bg);
+  }
+  header h1 { font-size: 16px; margin: 0 0 2px; }
+  header p { font-size: 12px; color: var(--text-muted); margin: 0; }
+
+  #layout { flex: 1; display: flex; min-height: 0; }
+  #sidebar {
+    width: 300px; flex-shrink: 0; overflow-y: auto; padding: 14px;
+    border-right: 1px solid var(--border); background: var(--panel-bg);
+    font-size: 13px;
+  }
+  #sidebar label { display: block; font-weight: 600; margin: 14px 0 6px; }
+  #sidebar label:first-child { margin-top: 0; }
+  #sidebar input[type="file"] {
+    width: 100%; font-size: 12px; color: var(--text);
+  }
+  #sidebar .hint { color: var(--text-muted); font-size: 11px; margin-top: 2px; }
+  #sidebar input[type="range"] { width: 100%; }
+  #status { font-size: 12px; margin-top: 14px; color: var(--text-muted); white-space: pre-line; }
+  #map-wrap { flex: 1; position: relative; }
+  #map { position: absolute; inset: 0; }
+
+  #control-panel {
+    position: absolute; bottom: 20px; left: 10px; z-index: 500;
+    background: var(--panel-bg); border: 1px solid var(--border);
+    padding: 12px; border-radius: 10px; font-size: 12px; width: 200px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+  }
+  #control-panel b { font-size: 13px; }
+  #control-panel hr { border-color: var(--border); }
+  #control-panel input[type="range"] { width: 100%; }
+</style>
+</head>
+<body>
+
+<div id="lock-screen">
+  <div id="lock-box">
+    <h1>Acesso restrito</h1>
+    <p>Digite a senha para abrir o mapa. (Barreira local, não é autenticação de servidor.)</p>
+    <input id="lock-password" type="password" placeholder="Senha" autocomplete="off">
+    <button id="lock-submit">Entrar</button>
+    <div id="lock-error"></div>
+  </div>
+</div>
+
+<div id="app">
+  <header>
+    <h1>Mapa de Estações Rádio Base (ERBs) e Azimutes</h1>
+    <p>Visualize estações, setores de cobertura e azimutes das antenas para identificar casos críticos de apontamento em relação a prédios de referência.</p>
+  </header>
+  <div id="layout">
+    <div id="sidebar">
+      <label>CSV de licenciamento (ANATEL, separador "|")</label>
+      <input id="file-principal" type="file" accept=".csv">
+      <div class="hint">Obrigatório. Colunas esperadas: Latitude, Longitude, Azimute, AnguloMeiaPotenciaAntena.</div>
+
+      <label>Correções de coordenadas (opcional)</label>
+      <input id="file-correcoes" type="file" accept=".csv">
+      <div class="hint">Colunas: NumEstacao, Latitude, Longitude.</div>
+
+      <label>Prédios alvo (opcional, vermelho)</label>
+      <input id="file-alvo" type="file" accept=".csv">
+      <div class="hint">Colunas de latitude/longitude.</div>
+
+      <label>Prédios não-alvo (opcional, verde)</label>
+      <input id="file-nao-alvo" type="file" accept=".csv">
+      <div class="hint">Colunas de latitude/longitude.</div>
+
+      <label>Raio do setor (m): <span id="raio-valor">100</span></label>
+      <input id="raio" type="range" min="20" max="1000" step="10" value="100">
+
+      <label style="display:flex; align-items:center; gap:6px; font-weight:400;">
+        <input id="satelite" type="checkbox" checked style="width:auto;"> Usar imagem de satélite
+      </label>
+
+      <div id="status"></div>
+    </div>
+    <div id="map-wrap">
+      <div id="map"></div>
+      <div id="control-panel">
+        <b>Controle de Transparência</b><hr>
+        <label>Mapa base</label>
+        <input id="slider-base" type="range" min="0" max="100" value="100">
+        <label>Marcadores</label>
+        <input id="slider-marcadores" type="range" min="0" max="100" value="100">
+        <label>Setores/Azimutes</label>
+        <input id="slider-setores" type="range" min="0" max="100" value="100">
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---------------- Trava de acesso local (não é segurança real) ----------------
+const SENHA_HASH_SHA256 = "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918"; // "admin"
+
+async function sha256Hex(texto) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(texto));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function tentarLogin() {
+  const senha = document.getElementById("lock-password").value;
+  const hash = await sha256Hex(senha);
+  if (hash === SENHA_HASH_SHA256) {
+    document.getElementById("lock-screen").style.display = "none";
+    document.getElementById("app").style.display = "flex";
+    inicializarMapa();
+  } else {
+    document.getElementById("lock-error").textContent = "Senha incorreta.";
+  }
+}
+document.getElementById("lock-submit").addEventListener("click", tentarLogin);
+document.getElementById("lock-password").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") tentarLogin();
+});
+
+// ---------------- Geodésia (porta de calcular_destino / gerar_setor) ----------------
+function calcularDestino(lat, lon, azimuteGraus, distanciaMetros) {
+  const R = 6371000;
+  const brng = azimuteGraus * Math.PI / 180;
+  const lat1 = lat * Math.PI / 180;
+  const lon1 = lon * Math.PI / 180;
+  const lat2 = Math.asin(
+    Math.sin(lat1) * Math.cos(distanciaMetros / R) +
+    Math.cos(lat1) * Math.sin(distanciaMetros / R) * Math.cos(brng)
+  );
+  const lon2 = lon1 + Math.atan2(
+    Math.sin(brng) * Math.sin(distanciaMetros / R) * Math.cos(lat1),
+    Math.cos(distanciaMetros / R) - Math.sin(lat1) * Math.sin(lat2)
+  );
+  return [lat2 * 180 / Math.PI, lon2 * 180 / Math.PI];
+}
+
+function gerarSetor(lat, lon, azimute, abertura, raio) {
+  const coords = [[lat, lon]];
+  const inicio = azimute - abertura / 2;
+  const fim = azimute + abertura / 2;
+  const passos = 12;
+  for (let i = 0; i <= passos; i++) {
+    const ang = inicio + (fim - inicio) * (i / passos);
+    coords.push(calcularDestino(lat, lon, ang, raio));
+  }
+  coords.push([lat, lon]);
+  return coords;
+}
+
+// ---------------- Utilitários de CSV ----------------
+function lerCsv(file, delimiter) {
+  return new Promise((resolve, reject) => {
+    Papa.parse(file, {
+      header: true,
+      delimiter: delimiter || ",",
+      skipEmptyLines: true,
+      complete: (res) => resolve(res.data),
+      error: reject,
+    });
+  });
+}
+
+function paraNumero(v) {
+  const n = parseFloat(v);
+  return Number.isNaN(n) ? null : n;
+}
+
+function encontrarColuna(colunas, candidatos) {
+  const mapa = {};
+  colunas.forEach(c => mapa[c.toLowerCase()] = c);
+  for (const cand of candidatos) {
+    if (mapa[cand]) return mapa[cand];
+  }
+  return null;
+}
+
+function lerPontos(linhas) {
+  if (!linhas.length) return [];
+  const colunas = Object.keys(linhas[0]);
+  const colLat = encontrarColuna(colunas, ["latitude", "lat"]);
+  const colLon = encontrarColuna(colunas, ["longitude", "lon", "lng"]);
+  if (!colLat || !colLon) throw new Error("Arquivo de prédios precisa ter colunas de latitude/longitude.");
+  return linhas
+    .map(l => [paraNumero(l[colLat]), paraNumero(l[colLon])])
+    .filter(p => p[0] !== null && p[1] !== null);
+}
+
+// ---------------- Estado do mapa ----------------
+let mapa = null;
+let camadaGeometrias = null;
+let camadaEstacoes = null;
+let tileLayerAtual = null;
+
+function inicializarMapa() {
+  mapa = L.map("map").setView([-15.78, -47.93], 4);
+  trocarTile(true);
+  camadaGeometrias = L.layerGroup().addTo(mapa);
+  camadaEstacoes = L.layerGroup().addTo(mapa);
+  L.control.layers(null, {
+    "Setores e Azimutes": camadaGeometrias,
+    "Marcadores": camadaEstacoes,
+  }).addTo(mapa);
+
+  document.getElementById("raio").addEventListener("input", (e) => {
+    document.getElementById("raio-valor").textContent = e.target.value;
+  });
+  document.getElementById("satelite").addEventListener("change", () => trocarTile(false));
+
+  document.getElementById("file-principal").addEventListener("change", processarTudo);
+  document.getElementById("file-correcoes").addEventListener("change", processarTudo);
+  document.getElementById("file-alvo").addEventListener("change", processarTudo);
+  document.getElementById("file-nao-alvo").addEventListener("change", processarTudo);
+  document.getElementById("raio").addEventListener("change", processarTudo);
+
+  configurarSlidersOpacidade();
+}
+
+function trocarTile(primeiraVez) {
+  if (tileLayerAtual) mapa.removeLayer(tileLayerAtual);
+  const satelite = document.getElementById("satelite").checked;
+  if (satelite) {
+    tileLayerAtual = L.tileLayer("https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}", {
+      attribution: "Google Hybrid", maxZoom: 20,
+    });
+  } else {
+    tileLayerAtual = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "&copy; OpenStreetMap", maxZoom: 19,
+    });
+  }
+  tileLayerAtual.addTo(mapa);
+  if (!primeiraVez) reprocessarSePossivel();
+}
+
+function reprocessarSePossivel() {
+  if (document.getElementById("file-principal").files.length) processarTudo();
+}
+
+function setStatus(msg) {
+  document.getElementById("status").textContent = msg;
+}
+
+async function processarTudo() {
+  const arqPrincipal = document.getElementById("file-principal").files[0];
+  if (!arqPrincipal) return;
+
+  try {
+    setStatus("Processando...");
+    const linhas = await lerCsv(arqPrincipal, "|");
+    if (!linhas.length) throw new Error("CSV vazio ou separador incorreto.");
+
+    let estacoes = linhas.map(l => ({
+      ...l,
+      Latitude: paraNumero(l.Latitude),
+      Longitude: paraNumero(l.Longitude),
+      Azimute: paraNumero(l.Azimute),
+      AnguloMeiaPotenciaAntena: paraNumero(l.AnguloMeiaPotenciaAntena),
+    })).filter(e => e.Latitude !== null && e.Longitude !== null);
+
+    const arqCorrecoes = document.getElementById("file-correcoes").files[0];
+    if (arqCorrecoes) {
+      const correcoes = await lerCsv(arqCorrecoes, ",");
+      const porId = {};
+      correcoes.forEach(c => {
+        porId[c.NumEstacao] = [paraNumero(c.Latitude), paraNumero(c.Longitude)];
+      });
+      estacoes.forEach(e => {
+        if (e.NumEstacao && porId[e.NumEstacao]) {
+          [e.Latitude, e.Longitude] = porId[e.NumEstacao];
+        }
+      });
+    }
+
+    let predioAlvo = [];
+    const arqAlvo = document.getElementById("file-alvo").files[0];
+    if (arqAlvo) predioAlvo = lerPontos(await lerCsv(arqAlvo, ","));
+
+    let predioNaoAlvo = [];
+    const arqNaoAlvo = document.getElementById("file-nao-alvo").files[0];
+    if (arqNaoAlvo) predioNaoAlvo = lerPontos(await lerCsv(arqNaoAlvo, ","));
+
+    const raio = parseInt(document.getElementById("raio").value, 10);
+    desenharMapa(estacoes, predioAlvo, predioNaoAlvo, raio);
+
+    setStatus(`${estacoes.length} registros de estação carregados.`);
+  } catch (err) {
+    setStatus("Erro: " + err.message);
+    console.error(err);
+  }
+}
+
+function desenharMapa(estacoes, predioAlvo, predioNaoAlvo, raio) {
+  camadaGeometrias.clearLayers();
+  camadaEstacoes.clearLayers();
+
+  if (!estacoes.length) return;
+
+  const latMedia = estacoes.reduce((s, e) => s + e.Latitude, 0) / estacoes.length;
+  const lonMedia = estacoes.reduce((s, e) => s + e.Longitude, 0) / estacoes.length;
+  mapa.setView([latMedia, lonMedia], 15);
+
+  // Setores: deduplicar por (lat, lon, azimute) mantendo apenas HPBW > 0
+  const vistos = new Set();
+  estacoes.forEach(e => {
+    if (e.Azimute === null || !e.AnguloMeiaPotenciaAntena || e.AnguloMeiaPotenciaAntena <= 0) return;
+    const chave = `${e.Latitude}|${e.Longitude}|${e.Azimute}`;
+    if (vistos.has(chave)) return;
+    vistos.add(chave);
+
+    const circulo = L.circle([e.Latitude, e.Longitude], {
+      radius: raio, color: "yellow", fill: false, weight: 3, opacity: 0.8,
+    }).addTo(camadaGeometrias);
+    circulo._isSetor = true;
+
+    const poligono = L.polygon(gerarSetor(e.Latitude, e.Longitude, e.Azimute, e.AnguloMeiaPotenciaAntena, raio), {
+      color: "yellow", fill: true, fillColor: "yellow", fillOpacity: 0.2, weight: 0.5,
+    }).addTo(camadaGeometrias);
+    poligono._isSetor = true;
+
+    const p2 = calcularDestino(e.Latitude, e.Longitude, e.Azimute, raio);
+    const linha = L.polyline([[e.Latitude, e.Longitude], p2], { color: "red", weight: 2 }).addTo(camadaGeometrias);
+    linha._isAzimute = true;
+  });
+
+  // Marcadores de estação (um por NumEstacao, se existir)
+  const vistosEstacao = new Set();
+  const colunasPopup = ["NomeEntidade", "Tecnologia", "Municipio.NomeMunicipio", "EnderecoEstacao", "Azimute"];
+  estacoes.forEach(e => {
+    const idEstacao = e.NumEstacao || `${e.Latitude},${e.Longitude}`;
+    if (vistosEstacao.has(idEstacao)) return;
+    vistosEstacao.add(idEstacao);
+
+    const linhasPopup = colunasPopup
+      .filter(c => e[c] !== undefined && e[c] !== "" && e[c] !== null)
+      .map(c => `${c}: ${e[c]}`);
+    const popupTexto = linhasPopup.length ? linhasPopup.join("<br>") : "Estação";
+
+    const marcador = L.circleMarker([e.Latitude, e.Longitude], {
+      radius: 4, color: "blue", fill: true, fillOpacity: 1,
+    }).bindPopup(popupTexto).addTo(camadaEstacoes);
+    marcador._isMarcador = true;
+  });
+
+  predioAlvo.forEach(([lat, lon]) => {
+    const m = L.circleMarker([lat, lon], { radius: 4, color: "red", fill: true, fillOpacity: 1 })
+      .bindPopup(`<b>Prédio Alvo</b><br>${lat}, ${lon}`).addTo(camadaEstacoes);
+    m._isMarcador = true;
+  });
+
+  predioNaoAlvo.forEach(([lat, lon]) => {
+    const m = L.circleMarker([lat, lon], { radius: 4, color: "green", fill: true, fillOpacity: 1 })
+      .bindPopup(`<b>Prédio Não-Alvo</b><br>${lat}, ${lon}`).addTo(camadaEstacoes);
+    m._isMarcador = true;
+  });
+
+  aplicarOpacidades();
+}
+
+function configurarSlidersOpacidade() {
+  document.getElementById("slider-base").addEventListener("input", (e) => {
+    const val = e.target.value / 100;
+    const panes = document.getElementsByClassName("leaflet-tile-pane");
+    if (panes.length) panes[0].style.opacity = val;
+  });
+  document.getElementById("slider-marcadores").addEventListener("input", aplicarOpacidades);
+  document.getElementById("slider-setores").addEventListener("input", aplicarOpacidades);
+}
+
+function aplicarOpacidades() {
+  const valMarcadores = document.getElementById("slider-marcadores").value / 100;
+  const valSetores = document.getElementById("slider-setores").value / 100;
+
+  camadaEstacoes.eachLayer(layer => {
+    if (layer._isMarcador && layer.setStyle) {
+      layer.setStyle({ opacity: valMarcadores, fillOpacity: valMarcadores });
+    }
+  });
+
+  camadaGeometrias.eachLayer(layer => {
+    if (!layer.setStyle) return;
+    if (layer._isSetor) {
+      const temPreenchimento = layer.options.fill;
+      layer.setStyle({
+        opacity: valSetores,
+        fillOpacity: temPreenchimento ? valSetores * 0.2 : 0,
+      });
+    } else if (layer._isAzimute) {
+      layer.setStyle({ opacity: valSetores });
+    }
+  });
+}
+</script>
+</body>
+</html>
