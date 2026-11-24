@@ -1,13 +1,3 @@
----
-title: Mapa ERB Azimutes
-emoji: 📡
-colorFrom: blue
-colorTo: gray
-sdk: streamlit
-app_file: app.py
-pinned: false
----
-
 # Mapa de ERBs e Azimutes
 
 Aplicação Streamlit para visualizar estações rádio base (ERBs), seus setores de
@@ -76,37 +66,37 @@ python -c "import hashlib; print(hashlib.sha256('sua-nova-senha'.encode()).hexdi
    `.streamlit/secrets.toml` local (com os hashes reais de senha).
 4. Clique em **Deploy**.
 
-## Deploy no Hugging Face Spaces (alternativa)
+## Deploy no Hugging Face Spaces (ativo)
 
-Se a conta do Streamlit Community Cloud estiver bloqueada/indisponível, o
-mesmo app roda em um [Space](https://huggingface.co/spaces) do Hugging Face
-(free tier), usando este mesmo repositório.
+A Hugging Face passou a cobrar assinatura PRO para Spaces do tipo `docker`
+ou `gradio`; apenas o tipo `static` (HTML/JS puro, sem servidor) continua
+gratuito. Por isso, o que está publicado lá é a **versão standalone**
+([`mapa_portatil.html`](mapa_portatil.html)), enviada como `index.html` de
+um Space estático:
 
-1. Crie uma conta em https://huggingface.co (se ainda não tiver) e gere um
-   **Access Token** (tipo *Write*) em
-   https://huggingface.co/settings/tokens.
-2. Instale a CLI e faça login (cole o token quando pedir):
-   ```bash
-   pip install huggingface_hub
-   huggingface-cli login
-   ```
-3. Crie um Space em https://huggingface.co/new-space com:
-   - SDK: **Streamlit**
-   - Visibilidade: pública ou privada, como preferir
-4. Adicione o Space como um segundo remote git deste repositório e envie o
-   código (o `README.md` já tem o front-matter que o Hugging Face exige):
-   ```bash
-   git remote add space https://huggingface.co/spaces/SEU_USUARIO/NOME_DO_SPACE
-   git push space main
-   ```
-5. No painel do Space, vá em **Settings → Variables and secrets** e
-   adicione como *secret*:
-   - `ADMIN_PASSWORD_HASH`: o hash bcrypt da senha (gerado com
-     `python gerar_hash_senha.py`)
-   - `COOKIE_KEY`: uma string aleatória longa (`python -c "import secrets; print(secrets.token_hex(32))"`)
-   - Opcionalmente `COOKIE_NAME` e `COOKIE_EXPIRY_DAYS`
+**https://huggingface.co/spaces/ivandantas108/mapa-erb-azimutes**
+(direto: https://ivandantas108-mapa-erb-azimutes.static.hf.space/)
 
-   (O `app.py` já sabe ler essas variáveis de ambiente quando não há
-   `st.secrets` configurado, então não é preciso tocar no código.)
-6. O Space reconstrói e publica automaticamente após o push e a definição
-   dos secrets.
+Senha de acesso: `admin` (trava local em JavaScript, não é login de
+servidor — ver limitações na seção "Versão standalone" acima).
+
+Para atualizar o Space após mudar `mapa_portatil.html`:
+```bash
+pip install huggingface_hub
+python -c "
+from huggingface_hub import HfApi
+api = HfApi()  # usa o login feito via 'huggingface-cli login'
+api.upload_file(
+    path_or_fileobj='mapa_portatil.html',
+    path_in_repo='index.html',
+    repo_id='ivandantas108/mapa-erb-azimutes',
+    repo_type='space',
+)
+"
+```
+
+Se no futuro você assinar o Hugging Face PRO e quiser o `app.py` completo
+(com login de servidor de verdade) rodando lá, este repositório já inclui
+um [`Dockerfile`](Dockerfile) pronto: basta recriar o Space com
+`space_sdk='docker'` e dar `git push` deste repositório para o remote do
+Space.
