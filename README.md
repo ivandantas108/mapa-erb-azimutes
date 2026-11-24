@@ -1,3 +1,13 @@
+---
+title: Mapa ERB Azimutes
+emoji: 📡
+colorFrom: blue
+colorTo: gray
+sdk: streamlit
+app_file: app.py
+pinned: false
+---
+
 # Mapa de ERBs e Azimutes
 
 Aplicação Streamlit para visualizar estações rádio base (ERBs), seus setores de
@@ -65,3 +75,38 @@ python -c "import hashlib; print(hashlib.sha256('sua-nova-senha'.encode()).hexdi
 3. Em **Advanced settings → Secrets**, cole o conteúdo do seu
    `.streamlit/secrets.toml` local (com os hashes reais de senha).
 4. Clique em **Deploy**.
+
+## Deploy no Hugging Face Spaces (alternativa)
+
+Se a conta do Streamlit Community Cloud estiver bloqueada/indisponível, o
+mesmo app roda em um [Space](https://huggingface.co/spaces) do Hugging Face
+(free tier), usando este mesmo repositório.
+
+1. Crie uma conta em https://huggingface.co (se ainda não tiver) e gere um
+   **Access Token** (tipo *Write*) em
+   https://huggingface.co/settings/tokens.
+2. Instale a CLI e faça login (cole o token quando pedir):
+   ```bash
+   pip install huggingface_hub
+   huggingface-cli login
+   ```
+3. Crie um Space em https://huggingface.co/new-space com:
+   - SDK: **Streamlit**
+   - Visibilidade: pública ou privada, como preferir
+4. Adicione o Space como um segundo remote git deste repositório e envie o
+   código (o `README.md` já tem o front-matter que o Hugging Face exige):
+   ```bash
+   git remote add space https://huggingface.co/spaces/SEU_USUARIO/NOME_DO_SPACE
+   git push space main
+   ```
+5. No painel do Space, vá em **Settings → Variables and secrets** e
+   adicione como *secret*:
+   - `ADMIN_PASSWORD_HASH`: o hash bcrypt da senha (gerado com
+     `python gerar_hash_senha.py`)
+   - `COOKIE_KEY`: uma string aleatória longa (`python -c "import secrets; print(secrets.token_hex(32))"`)
+   - Opcionalmente `COOKIE_NAME` e `COOKIE_EXPIRY_DAYS`
+
+   (O `app.py` já sabe ler essas variáveis de ambiente quando não há
+   `st.secrets` configurado, então não é preciso tocar no código.)
+6. O Space reconstrói e publica automaticamente após o push e a definição
+   dos secrets.

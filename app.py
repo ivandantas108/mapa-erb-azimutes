@@ -1,3 +1,5 @@
+import os
+
 import pandas as pd
 import streamlit as st
 import streamlit_authenticator as stauth
@@ -21,9 +23,37 @@ def _para_dict_puro(valor):
     return valor
 
 
+def _config_credenciais():
+    """Lê credenciais de st.secrets (Streamlit Cloud/local) ou, na ausência,
+    de variáveis de ambiente (Hugging Face Spaces usa 'Repository secrets' como env vars)."""
+    try:
+        credenciais = _para_dict_puro(st.secrets["credentials"])
+        cookie_cfg = dict(st.secrets["cookie"])
+        return credenciais, cookie_cfg
+    except Exception:
+        pass
+
+    senha_hash = os.environ.get("ADMIN_PASSWORD_HASH")
+    cookie_key = os.environ.get("COOKIE_KEY")
+    if not senha_hash or not cookie_key:
+        st.error(
+            "Configuração de login ausente. Defina os secrets "
+            "`credentials`/`cookie` (Streamlit) ou as variáveis de ambiente "
+            "`ADMIN_PASSWORD_HASH` e `COOKIE_KEY` (Hugging Face Spaces)."
+        )
+        st.stop()
+
+    credenciais = {"usernames": {"admin": {"name": "Administrador", "password": senha_hash}}}
+    cookie_cfg = {
+        "name": os.environ.get("COOKIE_NAME", "mapa_erb_auth"),
+        "key": cookie_key,
+        "expiry_days": float(os.environ.get("COOKIE_EXPIRY_DAYS", "30")),
+    }
+    return credenciais, cookie_cfg
+
+
 def carregar_autenticador():
-    credenciais = _para_dict_puro(st.secrets["credentials"])
-    cookie_cfg = st.secrets["cookie"]
+    credenciais, cookie_cfg = _config_credenciais()
     return stauth.Authenticate(
         credenciais,
         cookie_cfg["name"],
