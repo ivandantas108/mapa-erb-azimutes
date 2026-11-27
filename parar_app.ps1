@@ -49,6 +49,9 @@ try {
         }
 } catch {}
 
+$linkFile = Join-Path $RootDir "link_publico.txt"
+Remove-Item $linkFile -Force -ErrorAction SilentlyContinue
+
 if ($algoParado) {
     Write-Host ""
     Write-Host "Tudo encerrado. O link publico nao funciona mais." -ForegroundColor Green

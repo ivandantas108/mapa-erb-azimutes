@@ -191,11 +191,15 @@ if (-not $publicUrl) {
 
 try { Set-Clipboard -Value $publicUrl } catch {}
 
+$linkFile = Join-Path $RootDir "link_publico.txt"
+$dataHora = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+"$publicUrl`r`n(gerado em $dataHora)" | Set-Content -Path $linkFile -Encoding utf8
+
 Write-Host ""
 Write-Host "================================================================" -ForegroundColor Green
 Write-Host "  LINK PUBLICO (acessivel de qualquer computador/rede):"           -ForegroundColor Green
 Write-Host "  $publicUrl"                                                     -ForegroundColor White
-Write-Host "  (ja copiado para a area de transferencia)"                      -ForegroundColor Green
+Write-Host "  (ja copiado para a area de transferencia e salvo em link_publico.txt)" -ForegroundColor Green
 Write-Host "================================================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "Login: usuario 'admin', senha 'admin' (a menos que ja tenha trocado)" -ForegroundColor Yellow

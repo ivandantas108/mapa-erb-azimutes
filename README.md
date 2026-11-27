@@ -42,7 +42,12 @@ Dois arquivos de controle:
 Basta copiar a pasta do projeto para qualquer PC Windows com Python
 instalado e dar duplo clique em `publicar_app.bat`. O link gerado é do tipo
 `https://palavras-aleatorias.trycloudflare.com`, acessível de qualquer
-computador em qualquer rede.
+computador em qualquer rede. Ele aparece na janela do script (que fica aberta esperando um Enter) e
+também fica salvo em `link_publico.txt`, um arquivo criado na pasta do
+projeto a cada execução — útil para conferir o link depois, especialmente
+se for rodar numa máquina onde não vai ficar acompanhando a tela. O
+`parar_app.bat` apaga esse arquivo ao encerrar (arquivo ausente = app
+parado).
 
 Pré-requisitos: Python instalado e no PATH
 (https://www.python.org/downloads/, marcando "Add python.exe to PATH").
