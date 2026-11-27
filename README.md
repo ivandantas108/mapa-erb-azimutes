@@ -56,21 +56,9 @@ hash SHA-256 e substitua a constante `SENHA_HASH_SHA256` no arquivo:
 python -c "import hashlib; print(hashlib.sha256('sua-nova-senha'.encode()).hexdigest())"
 ```
 
-## Deploy no Streamlit Community Cloud
-
-1. Suba este repositório para o GitHub (já feito, se você seguiu o fluxo
-   completo).
-2. Acesse https://share.streamlit.io, conecte sua conta GitHub e escolha este
-   repositório + branch `main` + arquivo `app.py`.
-3. Em **Advanced settings → Secrets**, cole o conteúdo do seu
-   `.streamlit/secrets.toml` local (com os hashes reais de senha).
-4. Clique em **Deploy**.
-
 ## Deploy no Hugging Face Spaces (ativo)
 
-A Hugging Face passou a cobrar assinatura PRO para Spaces do tipo `docker`
-ou `gradio`; apenas o tipo `static` (HTML/JS puro, sem servidor) continua
-gratuito. Por isso, o que está publicado lá é a **versão standalone**
+O que está publicado lá é a **versão standalone**
 ([`mapa_portatil.html`](mapa_portatil.html)), enviada como `index.html` de
 um Space estático:
 
@@ -95,8 +83,3 @@ api.upload_file(
 "
 ```
 
-Se no futuro você assinar o Hugging Face PRO e quiser o `app.py` completo
-(com login de servidor de verdade) rodando lá, este repositório já inclui
-um [`Dockerfile`](Dockerfile) pronto: basta recriar o Space com
-`space_sdk='docker'` e dar `git push` deste repositório para o remote do
-Space.
