@@ -53,6 +53,13 @@ Pré-requisitos: Python instalado e no PATH
 (https://www.python.org/downloads/, marcando "Add python.exe to PATH").
 O resto (`cloudflared`) o script tenta instalar sozinho via `winget`.
 
+Para copiar o projeto para outro PC, **não copie a pasta `venv/`** — ela
+guarda um caminho fixo para o Python de onde foi criada e quebra em outra
+máquina (o script detecta isso automaticamente e recria do zero, mas
+simplesmente não copiar economiza tempo). O ideal é clonar direto do
+GitHub (`git clone https://github.com/ivandantas108/mapa-erb-azimutes.git`)
+ou copiar a pasta manualmente excluindo `venv/`.
+
 Pontos importantes:
 - O link muda a cada execução (é um túnel novo toda vez).
 - Só funciona enquanto o PC não suspender/hibernar nem perder internet —

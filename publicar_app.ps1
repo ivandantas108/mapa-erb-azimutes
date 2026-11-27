@@ -35,6 +35,22 @@ $venvPath = Join-Path $RootDir "venv"
 $venvPython = Join-Path $venvPath "Scripts\python.exe"
 $venvStreamlit = Join-Path $venvPath "Scripts\streamlit.exe"
 
+if (Test-Path $venvPython) {
+    # O venv guarda um caminho fixo para o Python que o criou. Se esta pasta
+    # foi copiada de outra maquina, esse caminho nao existe aqui e o venv
+    # fica quebrado - precisa recriar do zero.
+    $venvFunciona = $false
+    try {
+        & $venvPython --version *> $null
+        if ($LASTEXITCODE -eq 0) { $venvFunciona = $true }
+    } catch {}
+
+    if (-not $venvFunciona) {
+        Write-Secao "Ambiente virtual quebrado (provavelmente copiado de outro PC) - recriando"
+        Remove-Item $venvPath -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
 if (-not (Test-Path $venvPython)) {
     Write-Secao "Criando ambiente virtual (venv) - so acontece na primeira vez nesta maquina"
     & python -m venv $venvPath
