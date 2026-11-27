@@ -201,22 +201,11 @@ Write-Host ""
 Write-Host "Login: usuario 'admin', senha 'admin' (a menos que ja tenha trocado)" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "IMPORTANTE:" -ForegroundColor Cyan
-Write-Host " - Deixe esta janela aberta enquanto quiser manter o link no ar."
+Write-Host " - A aplicacao e o tunel rodam em segundo plano: pode fechar esta"
+Write-Host "   janela, o link continua no ar."
 Write-Host " - O computador nao pode suspender/hibernar nem perder internet."
 Write-Host " - Cada vez que voce rodar este arquivo, o link muda (e um novo tunel)."
-Write-Host " - Feche esta janela para encerrar a aplicacao e o link."
+Write-Host " - Para ENCERRAR de vez, rode parar_app.bat."
 Write-Host ""
 
-try {
-    while ($true) {
-        Start-Sleep -Seconds 5
-        if ($streamlitProc.HasExited -or $tunnelProc.HasExited) {
-            Write-Host "Um dos processos parou inesperadamente. Encerrando tudo..." -ForegroundColor Red
-            break
-        }
-    }
-} finally {
-    Stop-Process -Id $streamlitProc.Id -Force -ErrorAction SilentlyContinue
-    Stop-Process -Id $tunnelProc.Id -Force -ErrorAction SilentlyContinue
-    Remove-Item $pidFile -Force -ErrorAction SilentlyContinue
-}
+Read-Host "Pressione Enter para fechar esta janela"

@@ -28,14 +28,19 @@ python gerar_hash_senha.py
 
 ## Publicar com um clique (link público temporário)
 
-[`publicar_app.bat`](publicar_app.bat) automatiza tudo: cria o `venv` se
-não existir, instala as dependências, gera um login padrão (`admin`/`admin`)
-se este PC nunca rodou o app, instala o `cloudflared` se necessário, sobe a
-aplicação e abre um **túnel público** (Cloudflare) até ela.
+Dois arquivos de controle:
+
+- [`publicar_app.bat`](publicar_app.bat) — **inicia**: cria o `venv` se não
+  existir, instala as dependências, gera um login padrão (`admin`/`admin`)
+  se este PC nunca rodou o app, instala o `cloudflared` se necessário, sobe
+  a aplicação e abre um **túnel público** (Cloudflare) até ela. Imprime o
+  link (e já copia para a área de transferência) e depois fecha — a
+  aplicação e o túnel continuam rodando em segundo plano.
+- [`parar_app.bat`](parar_app.bat) — **para**: encerra a aplicação e o
+  túnel, derrubando o link.
 
 Basta copiar a pasta do projeto para qualquer PC Windows com Python
-instalado e dar duplo clique em `publicar_app.bat`. Ao final, ele imprime
-(e já copia para a área de transferência) um link do tipo
+instalado e dar duplo clique em `publicar_app.bat`. O link gerado é do tipo
 `https://palavras-aleatorias.trycloudflare.com`, acessível de qualquer
 computador em qualquer rede.
 
@@ -45,8 +50,12 @@ O resto (`cloudflared`) o script tenta instalar sozinho via `winget`.
 
 Pontos importantes:
 - O link muda a cada execução (é um túnel novo toda vez).
-- Só funciona enquanto a janela ficar aberta e o PC não suspender/hibernar
-  nem perder internet — fechar a janela encerra tudo.
+- Só funciona enquanto o PC não suspender/hibernar nem perder internet —
+  a janela do `publicar_app.bat` pode ser fechada, mas o PC precisa
+  continuar ligado.
+- Para encerrar de vez (e parar de ocupar a porta/internet), rode
+  `parar_app.bat`. Rodar `publicar_app.bat` de novo sem ter parado antes
+  também funciona — ele derruba a instância anterior e sobe uma nova.
 - Esse caminho usa o `app.py` de verdade, com login de servidor real
   (diferente da versão standalone HTML abaixo).
 
