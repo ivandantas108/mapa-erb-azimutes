@@ -26,6 +26,30 @@ python gerar_hash_senha.py
 > essa senha antes de usar o app com dados reais**, especialmente após o
 > deploy público.
 
+## Publicar com um clique (link público temporário)
+
+[`publicar_app.bat`](publicar_app.bat) automatiza tudo: cria o `venv` se
+não existir, instala as dependências, gera um login padrão (`admin`/`admin`)
+se este PC nunca rodou o app, instala o `cloudflared` se necessário, sobe a
+aplicação e abre um **túnel público** (Cloudflare) até ela.
+
+Basta copiar a pasta do projeto para qualquer PC Windows com Python
+instalado e dar duplo clique em `publicar_app.bat`. Ao final, ele imprime
+(e já copia para a área de transferência) um link do tipo
+`https://palavras-aleatorias.trycloudflare.com`, acessível de qualquer
+computador em qualquer rede.
+
+Pré-requisitos: Python instalado e no PATH
+(https://www.python.org/downloads/, marcando "Add python.exe to PATH").
+O resto (`cloudflared`) o script tenta instalar sozinho via `winget`.
+
+Pontos importantes:
+- O link muda a cada execução (é um túnel novo toda vez).
+- Só funciona enquanto a janela ficar aberta e o PC não suspender/hibernar
+  nem perder internet — fechar a janela encerra tudo.
+- Esse caminho usa o `app.py` de verdade, com login de servidor real
+  (diferente da versão standalone HTML abaixo).
+
 ## Dados de entrada
 
 - **CSV de licenciamento (obrigatório)**: exportação do Mosaico/ANATEL,
